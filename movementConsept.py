@@ -28,7 +28,7 @@ for dim in row_length:
 d = np.concatenate(data_list, axis=0)
 
 plt.plot(d[:, 0], d[:, 1], '*r')
-plt.show()
+# plt.show()
 
 
 ###############################################
@@ -43,12 +43,14 @@ class World:
         self.z5 = [[self.x_head + 1.5, high[2]], [self.x_head + 3, high[3]]]
         self.z7 = [[self.x_head, high[3]], [self.x_head + 1.5, high[4]]]
         self.waste = 0
+        self.collector = FruitHeightCollector()
 
     def update_zones(self):
-        self.z1 = [[self.x_head + 4.5, high[0]], [self.x_head + 6, high[1]]]
-        self.z3 = [[self.x_head + 3, high[1]], [self.x_head + 4.5, high[2]]]
-        self.z5 = [[self.x_head + 1.5, high[2]], [self.x_head + 3, high[3]]]
-        self.z7 = [[self.x_head, high[3]], [self.x_head + 1.5, high[4]]]
+        height_list = self.collector.zones_per_head_dict[self.x_head]
+        self.z1 = [[self.x_head + 4.5, height_list[0]], [self.x_head + 6, height_list[1]]]
+        self.z3 = [[self.x_head + 3, height_list[1]], [self.x_head + 4.5, height_list[2]]]
+        self.z5 = [[self.x_head + 1.5, height_list[2]], [self.x_head + 3, height_list[3]]]
+        self.z7 = [[self.x_head, height_list[3]], [self.x_head + 1.5, height_list[4]]]
 
     def picked(self):
         return self.total_f - len(self.data)
@@ -67,6 +69,50 @@ class World:
             self.waste = self.waste + 1
 
 
+class FruitHeightCollector:
+    def __init__(self):
+        self.heights = []
+        self.zones_per_head_dict = {0: high}
+        self.max_samples = 1000
+
+    def add_data(self, new_heights):
+        for height in new_heights:
+            if len(self.heights) >= self.max_samples:
+                self.heights.pop(0)  # Remove the oldest data point
+            self.heights.append(height)
+
+        print(f"Added {len(new_heights)} new samples. "
+              f"Total samples: {len(self.heights)}. "
+              f"Space remaining: {self.max_samples - len(self.heights)}")
+
+    def get_data(self):
+        return self.heights
+
+    def clear_data(self):
+        self.heights = []
+        print("All data cleared.")
+
+    def divide_into_zones(self, head):
+        if not self.heights:
+            return []
+
+        sorted_heights = sorted(self.heights)
+        total_fruits = len(sorted_heights)
+        fruits_per_zone = total_fruits // 4
+        remainder = total_fruits % 4
+
+        zones = [high[0]]
+        start = 0
+        for i in range(3):
+            end = start + fruits_per_zone + (1 if i < remainder else 0)
+            zones.append(sorted_heights[end])
+            start = end
+        zones.append(high[-1])
+
+        self.zones_per_head_dict[head] = zones
+        return
+
+
 ############# - regular method ################
 class WilliMovingAlgorithm:
     def __init__(self, world_d):
@@ -81,6 +127,11 @@ class WilliMovingAlgorithm:
         self.count_targets()
 
     def count_targets(self):
+        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z1[0], self.world.z1[1])[:, 1])
+        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z3[0], self.world.z3[1])[:, 1])
+        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z5[0], self.world.z5[1])[:, 1])
+        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z7[0], self.world.z7[1])[:, 1])
+
         self.zones_targets = [len(self.world.get_fruits_in_box(self.world.z1[0], self.world.z1[1])),
                               len(self.world.get_fruits_in_box(self.world.z3[0], self.world.z3[1])),
                               len(self.world.get_fruits_in_box(self.world.z5[0], self.world.z5[1])),
@@ -90,6 +141,7 @@ class WilliMovingAlgorithm:
         self.will_arr = np.array(self.zones_targets) > 0
         if np.sum(self.will_arr) <= self.willines:
             self.world.x_head = self.world.x_head + 1.5
+            self.world.collector.divide_into_zones(self.world.x_head)
             self.world.waste = self.world.waste + 4
 
     def pick_in_all_zones(self):
@@ -103,10 +155,10 @@ def plot_data(m_ct):
     fig, ax = plt.subplots(1)
 
     plt.plot(m_ct.world.data[:, 0], m_ct.world.data[:, 1], '*')
-    z1p = Rectangle(tuple(m_ct.world.z1[0]), 1.5, 0.7, facecolor="red", edgecolor="black", alpha=0.3)
-    z3p = Rectangle(tuple(m_ct.world.z3[0]), 1.5, 0.7, facecolor="red", edgecolor="black", alpha=0.3)
-    z5p = Rectangle(tuple(m_ct.world.z5[0]), 1.5, 0.7, facecolor="red", edgecolor="black", alpha=0.3)
-    z7p = Rectangle(tuple(m_ct.world.z7[0]), 1.5, 0.7, facecolor="red", edgecolor="black", alpha=0.3)
+    z1p = Rectangle(tuple(m_ct.world.z1[0]), 1.5, m_ct.world.z1[1][1]- m_ct.world.z1[0][1], facecolor="red", edgecolor="black", alpha=0.3)
+    z3p = Rectangle(tuple(m_ct.world.z3[0]), 1.5, m_ct.world.z3[1][1]- m_ct.world.z3[0][1], facecolor="red", edgecolor="black", alpha=0.3)
+    z5p = Rectangle(tuple(m_ct.world.z5[0]), 1.5, m_ct.world.z5[1][1]- m_ct.world.z5[0][1], facecolor="red", edgecolor="black", alpha=0.3)
+    z7p = Rectangle(tuple(m_ct.world.z7[0]), 1.5, m_ct.world.z7[1][1]- m_ct.world.z7[0][1], facecolor="red", edgecolor="black", alpha=0.3)
 
     ax.add_patch(z1p)
     ax.add_patch(z7p)
@@ -127,7 +179,7 @@ def update(frame):
 
     # Add rectangles for zones
     for zone in frame['zones']:
-        ax.add_patch(Rectangle(tuple(zone[0]), 1.5, 0.7, facecolor="blue", edgecolor="black", alpha=0.3))
+        ax.add_patch(Rectangle(tuple(zone[0]), 1.5, zone[1][1] - zone[0][1], facecolor="blue", edgecolor="black", alpha=0.3))
 
     # Update title
     ax.set_title('Plot Data Animation')
@@ -163,7 +215,7 @@ if animation:
     fig, ax = plt.subplots()
 
     # Create an animation
-    ani = FuncAnimation(fig, update, frames=frames, interval=1000)
+    ani = FuncAnimation(fig, update, frames=frames, interval=250)
     plt.title('old_method')
 
     plt.show()
@@ -171,4 +223,6 @@ if animation:
 plot_data(m_ctrl2)
 print("time = " + str(time))
 print("rate =" + str(m_ctrl2.world.picked() / time))
+
+pass
 # print("same time new method =" + str(new_rate * time))
