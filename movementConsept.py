@@ -24,7 +24,7 @@ SAMPLES_TO_SAVE = 1500
 ############# create data set ###############
 animation = True
 animation_speed = QUICK
-fars_still_works = ONE
+fars_still_works = ZERO
 count = [48, 24, 25, 7]  # Granny smith kleppe
 # count = [25, 25, 25, 25]
 sigma = 3  # mean and standard deviation
@@ -242,9 +242,15 @@ if animation:
     ani = FuncAnimation(fig, update, frames=frames, interval=animation_speed)
     plt.title('old_method')
 
+    # Save the animation as an mp4 video
+    # ani.save('picking.mp4', writer='ffmpeg')
+
+    # Save the animation as a gif
+    # ani.save('picking.gif', writer="pillow")
+
     plt.show()
 
-plot_data(m_ctrl2)
+# plot_data(m_ctrl2)
 print("time = " + str(time))
 print("rate =" + str(m_ctrl2.world.picked() / time))
 
