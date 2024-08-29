@@ -6,12 +6,30 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from matplotlib.animation import FuncAnimation
 
+# animation_speed in words: 100 -> 1 second per frame
+SLOW = 1000
+MEDIUM = 500
+FAST = 100
+VERY_FAST = 10
+QUICK = 0.5
+
+ZERO = 0
+ONE = 1
+TWO = 2
+THREE = 3
+
+
+SAMPLES_TO_SAVE = 1500
+
 ############# create data set ###############
 animation = True
+animation_speed = QUICK
+fars_still_works = ONE
 count = [48, 24, 25, 7]  # Granny smith kleppe
 # count = [25, 25, 25, 25]
 sigma = 3  # mean and standard deviation
 high = [1.4, 2.1, 2.8, 3.5, 4.2]
+# high = [1.4, 1.8100230465036224, 2.222941426197958, 3.0098384382552834, 4.2]
 i = 0
 data_list = []
 row_l = 100
@@ -27,7 +45,7 @@ for dim in row_length:
     i = 0
 d = np.concatenate(data_list, axis=0)
 
-plt.plot(d[:, 0], d[:, 1], '*r')
+# plt.plot(d[:, 0], d[:, 1], '*r')
 # plt.show()
 
 
@@ -73,15 +91,15 @@ class FruitHeightCollector:
     def __init__(self):
         self.heights = []
         self.zones_per_head_dict = {0: high}
-        self.max_samples = 1000
+        self.max_samples = SAMPLES_TO_SAVE
 
-    def add_data(self, new_heights):
+    def add_data(self, new_heights, zone):
         for height in new_heights:
             if len(self.heights) >= self.max_samples:
                 self.heights.pop(0)  # Remove the oldest data point
             self.heights.append(height)
 
-        print(f"Added {len(new_heights)} new samples. "
+        print(f"Added {len(new_heights)} new samples from zone {zone}. "
               f"Total samples: {len(self.heights)}. "
               f"Space remaining: {self.max_samples - len(self.heights)}")
 
@@ -118,20 +136,25 @@ class WilliMovingAlgorithm:
     def __init__(self, world_d):
         self.world = world_d
         self.z_c = self.world.z1
-        self.willines = 2  # 2 ->50% of 4
+        self.willingness = fars_still_works  # 2 ->50% of 4
         self.zones_targets = [100, 100, 100, 100]
         self.will_arr = [1, 1, 1, 1]
 
     def update_zones(self):
-        self.world.update_zones()
         self.count_targets()
 
-    def count_targets(self):
-        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z1[0], self.world.z1[1])[:, 1])
-        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z3[0], self.world.z3[1])[:, 1])
-        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z5[0], self.world.z5[1])[:, 1])
-        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z7[0], self.world.z7[1])[:, 1])
+    def update_after_movement(self):
+        self.world.collector.divide_into_zones(self.world.x_head)
+        self.world.update_zones()
+        self.count_targets_and_add_data()
 
+    def count_targets_and_add_data(self):
+        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z1[0], self.world.z1[1])[:, 1], 1)
+        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z3[0], self.world.z3[1])[:, 1], 3)
+        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z5[0], self.world.z5[1])[:, 1], 5)
+        self.world.collector.add_data(self.world.get_fruits_in_box(self.world.z7[0], self.world.z7[1])[:, 1], 7)
+
+    def count_targets(self):
         self.zones_targets = [len(self.world.get_fruits_in_box(self.world.z1[0], self.world.z1[1])),
                               len(self.world.get_fruits_in_box(self.world.z3[0], self.world.z3[1])),
                               len(self.world.get_fruits_in_box(self.world.z5[0], self.world.z5[1])),
@@ -139,9 +162,9 @@ class WilliMovingAlgorithm:
 
     def move_controller(self):
         self.will_arr = np.array(self.zones_targets) > 0
-        if np.sum(self.will_arr) <= self.willines:
+        if np.sum(self.will_arr) <= self.willingness:
             self.world.x_head = self.world.x_head + 1.5
-            self.world.collector.divide_into_zones(self.world.x_head)
+            self.update_after_movement()
             self.world.waste = self.world.waste + 4
 
     def pick_in_all_zones(self):
@@ -199,7 +222,8 @@ world2 = World(d)
 m_ctrl2 = WilliMovingAlgorithm(world2)
 frames = []
 time = 0
-while (m_ctrl2.world.x_head < row_l - 6) and (m_ctrl2.world.picked() < 4000):
+m_ctrl2.count_targets_and_add_data()
+while (m_ctrl2.world.x_head < row_l - 4.5) and (m_ctrl2.world.picked() < m_ctrl2.world.total_f):
     m_ctrl2.update_zones()
     m_ctrl2.pick_in_all_zones()
     m_ctrl2.move_controller()
@@ -215,7 +239,7 @@ if animation:
     fig, ax = plt.subplots()
 
     # Create an animation
-    ani = FuncAnimation(fig, update, frames=frames, interval=250)
+    ani = FuncAnimation(fig, update, frames=frames, interval=animation_speed)
     plt.title('old_method')
 
     plt.show()
