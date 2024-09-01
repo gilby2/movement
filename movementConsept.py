@@ -61,6 +61,9 @@ class World:
         self.z5 = [[self.x_head + 1.5, high[2]], [self.x_head + 3, high[3]]]
         self.z7 = [[self.x_head, high[3]], [self.x_head + 1.5, high[4]]]
         self.waste = 0
+        self.waste_session = 0
+        self.session_counter = 0
+        self.waste_session_dict = {}
         self.collector = FruitHeightCollector()
 
     def update_zones(self):
@@ -85,6 +88,7 @@ class World:
             self.data = np.delete(self.data, np.where(self.data == point)[0], axis=0)
         else:
             self.waste = self.waste + 1
+            self.waste_session += 1
 
 
 class FruitHeightCollector:
@@ -128,6 +132,7 @@ class FruitHeightCollector:
         zones.append(high[-1])
 
         self.zones_per_head_dict[head] = zones
+        # self.zones_per_head_dict[head] = self.zones_per_head_dict[0]
         return
 
 
@@ -137,6 +142,7 @@ class WilliMovingAlgorithm:
         self.world = world_d
         self.z_c = self.world.z1
         self.willingness = fars_still_works  # 2 ->50% of 4
+        self.session_counter = 0
         self.zones_targets = [100, 100, 100, 100]
         self.will_arr = [1, 1, 1, 1]
 
@@ -166,12 +172,15 @@ class WilliMovingAlgorithm:
             self.world.x_head = self.world.x_head + 1.5
             self.update_after_movement()
             self.world.waste = self.world.waste + 4
+            self.world.waste_session_dict[self.session_counter] = self.world.waste_session
+            self.session_counter += 1
+            self.world.waste_session = 0
 
     def pick_in_all_zones(self):
         self.world.pick_in_zone(self.world.z1)
         self.world.pick_in_zone(self.world.z3)
         self.world.pick_in_zone(self.world.z5)
-        self.world.pick_in_zone(self.world.z7)
+        self.world.pick_in_zone(self.world.z7)Sesion
 
 
 def plot_data(m_ct):
@@ -248,7 +257,22 @@ if animation:
     # Save the animation as a gif
     # ani.save('picking.gif', writer="pillow")
 
+    data = m_ctrl2.world.waste_session_dict
+    keys = list(data.keys())
+    values = list(data.values())
+
+    # Plotting as a bar chart
+    plt.figure(figsize=(10, 6))
+    plt.bar(keys, values, color='blue')
+    plt.xlabel('Session counter')
+    plt.ylabel('Waste time')
+    plt.title('Waste time per session')
+    plt.grid(True)
+
+
     plt.show()
+
+
 
 # plot_data(m_ctrl2)
 print("time = " + str(time))
