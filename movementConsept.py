@@ -180,7 +180,7 @@ class WilliMovingAlgorithm:
         self.world.pick_in_zone(self.world.z1)
         self.world.pick_in_zone(self.world.z3)
         self.world.pick_in_zone(self.world.z5)
-        self.world.pick_in_zone(self.world.z7)Sesion
+        self.world.pick_in_zone(self.world.z7)
 
 
 def plot_data(m_ct):
