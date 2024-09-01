@@ -28,8 +28,8 @@ fars_still_works = ZERO
 count = [48, 24, 25, 7]  # Granny smith kleppe
 # count = [25, 25, 25, 25]
 sigma = 3  # mean and standard deviation
-high = [1.4, 2.1, 2.8, 3.5, 4.2]
-# high = [1.4, 1.8100230465036224, 2.222941426197958, 3.0098384382552834, 4.2]
+# high = [1.4, 2.1, 2.8, 3.5, 4.2]
+high = [1.4, 1.8100230465036224, 2.222941426197958, 3.0098384382552834, 4.2]
 i = 0
 data_list = []
 row_l = 100
@@ -132,7 +132,7 @@ class FruitHeightCollector:
         zones.append(high[-1])
 
         self.zones_per_head_dict[head] = zones
-        # self.zones_per_head_dict[head] = self.zones_per_head_dict[0]
+        # self.zones_per_head_dict[head] = self.zones_per_head_dict[0]  # not adaptive divide
         return
 
 
@@ -260,13 +260,14 @@ if animation:
     data = m_ctrl2.world.waste_session_dict
     keys = list(data.keys())
     values = list(data.values())
-
+    sum_count = sum(data.values())
+    text = "Waste time per session - " + str(sum_count)
     # Plotting as a bar chart
     plt.figure(figsize=(10, 6))
     plt.bar(keys, values, color='blue')
     plt.xlabel('Session counter')
     plt.ylabel('Waste time')
-    plt.title('Waste time per session')
+    plt.title(text)
     plt.grid(True)
 
 
