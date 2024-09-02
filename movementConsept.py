@@ -30,24 +30,26 @@ count = [48, 24, 25, 7]  # Granny smith kleppe
 sigma = 3  # mean and standard deviation
 high = [1.4, 2.1, 2.8, 3.5, 4.2]
 
+
 darwin_2_minimal_height = [1.37, 1.764, 2.081, 2.382]
-# high = [1.4, 1.8100230465036224, 2.222941426197958, 3.0098384382552834, 4.2]
 i = 0
 data_list = []
 zone_wide = 1.5
-number_of_sessions = 20
+number_of_sessions = 63
 row_l = zone_wide * number_of_sessions
 row_length = np.arange(0, row_l, zone_wide)
 for dim in row_length:
     for num in count:
         n = round(abs(np.random.normal(num, sigma)))
         xy_min = [dim, high[i]]
-        xy_max = [dim + zone_wide, high[i] + 0.7]
+        xy_max = [dim + zone_wide, high[i + 1]]
         data_1 = np.random.uniform(low=xy_min, high=xy_max, size=(n, 2))
         data_list.append(data_1)
         i += 1
     i = 0
 d = np.concatenate(data_list, axis=0)
+# First smart allocation:
+# high = [1.4, 1.8042405418974585, 2.2662998535939827, 3.0727785071006806, 4.2]
 
 # plt.plot(d[:, 0], d[:, 1], '*r')
 # plt.show()
@@ -147,10 +149,18 @@ class FruitHeightCollector:
             zones.append(sorted_heights[end])
             start = end
         zones.append(high[-1])
-
+        zones = self.minimal_limit(zones)
         self.zones_per_head_dict[head] = zones
+
+        print(str(zones))
         # self.zones_per_head_dict[head] = self.zones_per_head_dict[0]  # not adaptive divide
         return
+
+    def minimal_limit(self, _zones):
+        for i in range(4):
+            if _zones[i] < darwin_2_minimal_height[i]:
+                _zones[i] = darwin_2_minimal_height[i]
+        return _zones
 
 
 ############# - regular method ################
@@ -278,18 +288,18 @@ if animation:
     # ani.save('short_line.gif', writer="pillow")
 
 #  show waste histogram
-    # data = m_ctrl2.world.waste_session_dict
-    # keys = list(data.keys())
-    # values = list(data.values())
-    # sum_count = sum(data.values())
-    # text = "Waste time per session - " + str(sum_count)
-    # # Plotting as a bar chart
-    # plt.figure(figsize=(10, 6))
-    # plt.bar(keys, values, color='blue')
-    # plt.xlabel('Session counter')
-    # plt.ylabel('Waste time')
-    # plt.title(text)
-    # plt.grid(True)
+    data = m_ctrl2.world.waste_session_dict
+    keys = list(data.keys())
+    values = list(data.values())
+    sum_count = sum(data.values())
+    text = "Waste time per session - " + str(sum_count)
+    # Plotting as a bar chart
+    plt.figure(figsize=(10, 6))
+    plt.bar(keys, values, color='blue')
+    plt.xlabel('Session counter')
+    plt.ylabel('Waste time')
+    plt.title(text)
+    plt.grid(True)
 
 
     plt.show()
@@ -303,7 +313,7 @@ m_ctrl2.world.clean_zone([[row_l - zone_wide * 3, high[3]], [row_l - zone_wide *
 fruit_left = len(m_ctrl2.world.data)
 print("\nTotal fruit = " + str(m_ctrl2.world.picked() + fruit_left))
 print("Fruit left = " + str(fruit_left))
-print("Left rate = " + str(fruit_left / (m_ctrl2.world.picked() + fruit_left)))
+print("Left rate = " + str((fruit_left / (m_ctrl2.world.picked() + fruit_left)) * 100) + "%")
 print("time = " + str(time))
 print("rate =" + str(m_ctrl2.world.picked() / time))
 
