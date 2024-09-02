@@ -28,17 +28,21 @@ fars_still_works = ZERO
 count = [48, 24, 25, 7]  # Granny smith kleppe
 # count = [25, 25, 25, 25]
 sigma = 3  # mean and standard deviation
-# high = [1.4, 2.1, 2.8, 3.5, 4.2]
-high = [1.4, 1.8100230465036224, 2.222941426197958, 3.0098384382552834, 4.2]
+high = [1.4, 2.1, 2.8, 3.5, 4.2]
+
+darwin_2_minimal_height = [1.37, 1.764, 2.081, 2.382]
+# high = [1.4, 1.8100230465036224, 2.222941426197958, 3.0098384382552834, 4.2]
 i = 0
 data_list = []
-row_l = 100
-row_length = np.arange(0, row_l, 1.5)
+zone_wide = 1.5
+number_of_sessions = 20
+row_l = zone_wide * number_of_sessions
+row_length = np.arange(0, row_l, zone_wide)
 for dim in row_length:
     for num in count:
         n = round(abs(np.random.normal(num, sigma)))
         xy_min = [dim, high[i]]
-        xy_max = [dim + 1.5, high[i] + 0.7]
+        xy_max = [dim + zone_wide, high[i] + 0.7]
         data_1 = np.random.uniform(low=xy_min, high=xy_max, size=(n, 2))
         data_list.append(data_1)
         i += 1
@@ -54,12 +58,20 @@ d = np.concatenate(data_list, axis=0)
 class World:
     def __init__(self, data):
         self.data = data
-        self.total_f = len(self.data)
         self.x_head = 0
-        self.z1 = [[self.x_head + 4.5, high[0]], [self.x_head + 6, high[1]]]
-        self.z3 = [[self.x_head + 3, high[1]], [self.x_head + 4.5, high[2]]]
-        self.z5 = [[self.x_head + 1.5, high[2]], [self.x_head + 3, high[3]]]
-        self.z7 = [[self.x_head, high[3]], [self.x_head + 1.5, high[4]]]
+        self.z1 = [[self.x_head + zone_wide * 3, high[0]], [self.x_head + zone_wide * 4, high[1]]]
+        self.z3 = [[self.x_head + zone_wide * 2, high[1]], [self.x_head + zone_wide * 3, high[2]]]
+        self.z5 = [[self.x_head + zone_wide, high[2]], [self.x_head + zone_wide * 2, high[3]]]
+        self.z7 = [[self.x_head, high[3]], [self.x_head + zone_wide, high[4]]]
+        self.clean_zone([[self.x_head, high[0]], [self.x_head + zone_wide, high[3]]])
+        self.clean_zone([[self.x_head + zone_wide, high[0]], [self.x_head + zone_wide * 2, high[2]]])
+        self.clean_zone([[self.x_head + zone_wide * 2, high[0]], [self.x_head + zone_wide * 3, high[1]]])
+
+        # self.clean_zone([[row_l - zone_wide, high[1]], [row_l, high[4]]])
+        # self.clean_zone([[row_l - zone_wide * 2, high[2]], [row_l - zone_wide, high[4]]])
+        # self.clean_zone([[row_l - zone_wide * 3, high[3]], [row_l - zone_wide * 2, high[4]]])
+
+        self.total_f = len(self.data)
         self.waste = 0
         self.waste_session = 0
         self.session_counter = 0
@@ -68,10 +80,10 @@ class World:
 
     def update_zones(self):
         height_list = self.collector.zones_per_head_dict[self.x_head]
-        self.z1 = [[self.x_head + 4.5, height_list[0]], [self.x_head + 6, height_list[1]]]
-        self.z3 = [[self.x_head + 3, height_list[1]], [self.x_head + 4.5, height_list[2]]]
-        self.z5 = [[self.x_head + 1.5, height_list[2]], [self.x_head + 3, height_list[3]]]
-        self.z7 = [[self.x_head, height_list[3]], [self.x_head + 1.5, height_list[4]]]
+        self.z1 = [[self.x_head + zone_wide * 3, height_list[0]], [self.x_head + zone_wide * 4, height_list[1]]]
+        self.z3 = [[self.x_head + zone_wide * 2, height_list[1]], [self.x_head + zone_wide * 3, height_list[2]]]
+        self.z5 = [[self.x_head + zone_wide, height_list[2]], [self.x_head + zone_wide * 2, height_list[3]]]
+        self.z7 = [[self.x_head, height_list[3]], [self.x_head + zone_wide, height_list[4]]]
 
     def picked(self):
         return self.total_f - len(self.data)
@@ -80,6 +92,11 @@ class World:
         inidx = np.all(np.logical_and(min_a <= self.data, self.data <= max_a), axis=1)
         inbox = self.data[inidx]
         return inbox
+
+    def clean_zone(self, zone):
+        p = self.get_fruits_in_box(zone[0], zone[1])
+        for point in p:
+            self.data = np.delete(self.data, np.where(self.data == point)[0], axis=0)
 
     def pick_in_zone(self, zone):
         p = self.get_fruits_in_box(zone[0], zone[1])
@@ -169,7 +186,7 @@ class WilliMovingAlgorithm:
     def move_controller(self):
         self.will_arr = np.array(self.zones_targets) > 0
         if np.sum(self.will_arr) <= self.willingness:
-            self.world.x_head = self.world.x_head + 1.5
+            self.world.x_head = self.world.x_head + zone_wide
             self.update_after_movement()
             self.world.waste = self.world.waste + 4
             self.world.waste_session_dict[self.session_counter] = self.world.waste_session
@@ -187,10 +204,10 @@ def plot_data(m_ct):
     fig, ax = plt.subplots(1)
 
     plt.plot(m_ct.world.data[:, 0], m_ct.world.data[:, 1], '*')
-    z1p = Rectangle(tuple(m_ct.world.z1[0]), 1.5, m_ct.world.z1[1][1]- m_ct.world.z1[0][1], facecolor="red", edgecolor="black", alpha=0.3)
-    z3p = Rectangle(tuple(m_ct.world.z3[0]), 1.5, m_ct.world.z3[1][1]- m_ct.world.z3[0][1], facecolor="red", edgecolor="black", alpha=0.3)
-    z5p = Rectangle(tuple(m_ct.world.z5[0]), 1.5, m_ct.world.z5[1][1]- m_ct.world.z5[0][1], facecolor="red", edgecolor="black", alpha=0.3)
-    z7p = Rectangle(tuple(m_ct.world.z7[0]), 1.5, m_ct.world.z7[1][1]- m_ct.world.z7[0][1], facecolor="red", edgecolor="black", alpha=0.3)
+    z1p = Rectangle(tuple(m_ct.world.z1[0]), zone_wide, m_ct.world.z1[1][1] - m_ct.world.z1[0][1], facecolor="red", edgecolor="black", alpha=0.3)
+    z3p = Rectangle(tuple(m_ct.world.z3[0]), zone_wide, m_ct.world.z3[1][1] - m_ct.world.z3[0][1], facecolor="red", edgecolor="black", alpha=0.3)
+    z5p = Rectangle(tuple(m_ct.world.z5[0]), zone_wide, m_ct.world.z5[1][1] - m_ct.world.z5[0][1], facecolor="red", edgecolor="black", alpha=0.3)
+    z7p = Rectangle(tuple(m_ct.world.z7[0]), zone_wide, m_ct.world.z7[1][1] - m_ct.world.z7[0][1], facecolor="red", edgecolor="black", alpha=0.3)
 
     ax.add_patch(z1p)
     ax.add_patch(z7p)
@@ -211,12 +228,15 @@ def update(frame):
 
     # Add rectangles for zones
     for zone in frame['zones']:
-        ax.add_patch(Rectangle(tuple(zone[0]), 1.5, zone[1][1] - zone[0][1], facecolor="blue", edgecolor="black", alpha=0.3))
-
+        ax.add_patch(Rectangle(tuple(zone[0]), zone_wide, zone[1][1] - zone[0][1], facecolor="blue", edgecolor="black", alpha=0.3))
+    # Add lines for minimal height
+    for height in darwin_2_minimal_height:
+        ax.axhline(y=height, color='green', linestyle='-', linewidth=2)
     # Update title
     ax.set_title('Plot Data Animation')
 
     # Update layout
+    ax.set_xlim(0, row_l)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     sys.stdout.write(
@@ -232,7 +252,7 @@ m_ctrl2 = WilliMovingAlgorithm(world2)
 frames = []
 time = 0
 m_ctrl2.count_targets_and_add_data()
-while (m_ctrl2.world.x_head < row_l - 4.5) and (m_ctrl2.world.picked() < m_ctrl2.world.total_f):
+while (m_ctrl2.world.x_head < row_l - zone_wide * 3) and (m_ctrl2.world.picked() < m_ctrl2.world.total_f):
     m_ctrl2.update_zones()
     m_ctrl2.pick_in_all_zones()
     m_ctrl2.move_controller()
@@ -255,20 +275,21 @@ if animation:
     # ani.save('picking.mp4', writer='ffmpeg')
 
     # Save the animation as a gif
-    # ani.save('picking.gif', writer="pillow")
+    # ani.save('short_line.gif', writer="pillow")
 
-    data = m_ctrl2.world.waste_session_dict
-    keys = list(data.keys())
-    values = list(data.values())
-    sum_count = sum(data.values())
-    text = "Waste time per session - " + str(sum_count)
-    # Plotting as a bar chart
-    plt.figure(figsize=(10, 6))
-    plt.bar(keys, values, color='blue')
-    plt.xlabel('Session counter')
-    plt.ylabel('Waste time')
-    plt.title(text)
-    plt.grid(True)
+#  show waste histogram
+    # data = m_ctrl2.world.waste_session_dict
+    # keys = list(data.keys())
+    # values = list(data.values())
+    # sum_count = sum(data.values())
+    # text = "Waste time per session - " + str(sum_count)
+    # # Plotting as a bar chart
+    # plt.figure(figsize=(10, 6))
+    # plt.bar(keys, values, color='blue')
+    # plt.xlabel('Session counter')
+    # plt.ylabel('Waste time')
+    # plt.title(text)
+    # plt.grid(True)
 
 
     plt.show()
@@ -276,6 +297,13 @@ if animation:
 
 
 # plot_data(m_ctrl2)
+m_ctrl2.world.clean_zone([[row_l - zone_wide, high[1]], [row_l, high[4]]])
+m_ctrl2.world.clean_zone([[row_l - zone_wide * 2, high[2]], [row_l - zone_wide, high[4]]])
+m_ctrl2.world.clean_zone([[row_l - zone_wide * 3, high[3]], [row_l - zone_wide * 2, high[4]]])
+fruit_left = len(m_ctrl2.world.data)
+print("\nTotal fruit = " + str(m_ctrl2.world.picked() + fruit_left))
+print("Fruit left = " + str(fruit_left))
+print("Left rate = " + str(fruit_left / (m_ctrl2.world.picked() + fruit_left)))
 print("time = " + str(time))
 print("rate =" + str(m_ctrl2.world.picked() / time))
 
