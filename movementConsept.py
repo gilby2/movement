@@ -207,11 +207,14 @@ class WilliMovingAlgorithm:
         self.will_arr = np.array(self.zones_targets) > 0
         if np.sum(self.will_arr) <= self.willingness:
             self.world.x_head = self.world.x_head + zone_wide
+            if self.world.x_head == row_l - zone_wide * 3:
+                return True
             self.update_after_movement()
             self.world.waste = self.world.waste + 4
             self.world.waste_session_dict[self.session_counter] = self.world.waste_session
             self.session_counter += 1
             self.world.waste_session = 0
+        return False
 
     def pick_in_all_zones(self):
         self.world.pick_in_zone(self.world.z1)
@@ -285,7 +288,9 @@ m_ctrl2.count_targets_and_add_data()
 while (m_ctrl2.world.x_head < row_l - zone_wide * 3) and (m_ctrl2.world.picked() < m_ctrl2.world.total_f):
     m_ctrl2.update_zones()
     m_ctrl2.pick_in_all_zones()
-    m_ctrl2.move_controller()
+    last_loop = m_ctrl2.move_controller()
+    if last_loop:
+        break
     time = time + 1
     x = m_ctrl2.world.data[:, 0]  # Random x values
     y = m_ctrl2.world.data[:, 1]  # Random y values
