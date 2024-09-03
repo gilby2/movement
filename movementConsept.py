@@ -25,6 +25,7 @@ SAMPLES_TO_SAVE = 1500
 animation = True
 animation_speed = QUICK
 fars_still_works = ZERO
+OVERLAP = True
 count = [48, 24, 25, 7]  # Granny smith kleppe
 # count = [25, 25, 25, 25]
 sigma = 3  # mean and standard deviation
@@ -68,10 +69,7 @@ class World:
         self.clean_zone([[self.x_head, high[0]], [self.x_head + zone_wide, high[3]]])
         self.clean_zone([[self.x_head + zone_wide, high[0]], [self.x_head + zone_wide * 2, high[2]]])
         self.clean_zone([[self.x_head + zone_wide * 2, high[0]], [self.x_head + zone_wide * 3, high[1]]])
-
-        # self.clean_zone([[row_l - zone_wide, high[1]], [row_l, high[4]]])
-        # self.clean_zone([[row_l - zone_wide * 2, high[2]], [row_l - zone_wide, high[4]]])
-        # self.clean_zone([[row_l - zone_wide * 3, high[3]], [row_l - zone_wide * 2, high[4]]])
+        self.height_list_overlap = [0, 0, 0, 0, 0]
 
         self.total_f = len(self.data)
         self.waste = 0
@@ -80,12 +78,21 @@ class World:
         self.waste_session_dict = {}
         self.collector = FruitHeightCollector()
 
+    def make_overlapping_when_change_allocation(self):
+        new_list = self.collector.zones_per_head_dict[self.x_head].copy()
+        if OVERLAP:
+            for i in range(1, 4):
+                if self.collector.zones_per_head_dict[self.x_head][i] > self.collector.zones_per_head_dict[self.x_head - zone_wide][i]:
+                    new_list[i] = self.collector.zones_per_head_dict[self.x_head - zone_wide][i]
+        return new_list
+
     def update_zones(self):
         height_list = self.collector.zones_per_head_dict[self.x_head]
+        self.height_list_overlap = self.make_overlapping_when_change_allocation()
         self.z1 = [[self.x_head + zone_wide * 3, height_list[0]], [self.x_head + zone_wide * 4, height_list[1]]]
-        self.z3 = [[self.x_head + zone_wide * 2, height_list[1]], [self.x_head + zone_wide * 3, height_list[2]]]
-        self.z5 = [[self.x_head + zone_wide, height_list[2]], [self.x_head + zone_wide * 2, height_list[3]]]
-        self.z7 = [[self.x_head, height_list[3]], [self.x_head + zone_wide, height_list[4]]]
+        self.z3 = [[self.x_head + zone_wide * 2, self.height_list_overlap[1]], [self.x_head + zone_wide * 3, height_list[2]]]
+        self.z5 = [[self.x_head + zone_wide, self.height_list_overlap[2]], [self.x_head + zone_wide * 2, height_list[3]]]
+        self.z7 = [[self.x_head, self.height_list_overlap[3]], [self.x_head + zone_wide, height_list[4]]]
 
     def picked(self):
         return self.total_f - len(self.data)
@@ -97,8 +104,11 @@ class World:
 
     def clean_zone(self, zone):
         p = self.get_fruits_in_box(zone[0], zone[1])
+        counter = 0
         for point in p:
             self.data = np.delete(self.data, np.where(self.data == point)[0], axis=0)
+            counter += 1
+        return counter
 
     def pick_in_zone(self, zone):
         p = self.get_fruits_in_box(zone[0], zone[1])
@@ -256,6 +266,16 @@ def update(frame):
     sys.stdout.flush()
 
 
+# clean irrelevant data
+def clean_irrelevant_data(_ctrl2):
+    counter = 0
+    last_high = _ctrl2.world.height_list_overlap
+    counter += _ctrl2.world.clean_zone([[row_l - zone_wide, last_high[1]], [row_l, last_high[4]]])
+    counter += _ctrl2.world.clean_zone([[row_l - zone_wide * 2, last_high[2]], [row_l - zone_wide, last_high[4]]])
+    counter += _ctrl2.world.clean_zone([[row_l - zone_wide * 3, last_high[3]], [row_l - zone_wide * 2, last_high[4]]])
+    m_ctrl2.world.total_f = m_ctrl2.world.total_f - counter
+
+
 # run algorithm2####
 world2 = World(d)
 m_ctrl2 = WilliMovingAlgorithm(world2)
@@ -305,14 +325,12 @@ if animation:
     plt.show()
 
 
-
+clean_irrelevant_data(m_ctrl2)
 # plot_data(m_ctrl2)
-m_ctrl2.world.clean_zone([[row_l - zone_wide, high[1]], [row_l, high[4]]])
-m_ctrl2.world.clean_zone([[row_l - zone_wide * 2, high[2]], [row_l - zone_wide, high[4]]])
-m_ctrl2.world.clean_zone([[row_l - zone_wide * 3, high[3]], [row_l - zone_wide * 2, high[4]]])
 fruit_left = len(m_ctrl2.world.data)
 print("\nTotal fruit = " + str(m_ctrl2.world.picked() + fruit_left))
 print("Fruit left = " + str(fruit_left))
+print("Picked = " + str(m_ctrl2.world.picked()))
 print("Left rate = " + str((fruit_left / (m_ctrl2.world.picked() + fruit_left)) * 100) + "%")
 print("time = " + str(time))
 print("rate =" + str(m_ctrl2.world.picked() / time))
