@@ -23,13 +23,23 @@ SAMPLES_TO_SAVE = 1500
 
 ############# create data set ###############
 CREATE_DATA = False
+CREATE_GIF = False
+OVERLAP = True
+PRINT_WASTE_FIGURE = True
+ADAPTIVE = True
+number_of_sessions = 30
+text_overlap = ''
+if OVERLAP:
+    text_overlap = 'overlap'
+data_file_name = 'array_data_' + str(number_of_sessions) + '_sessions.npy'
+gif_file_name = str(number_of_sessions) + '_sessions_' + text_overlap + '.gif'
+animation_title = str(number_of_sessions) + ' sessions ' + text_overlap
 animation = True
 animation_speed = QUICK
 fars_still_works = ZERO
-OVERLAP = True
 count = [48, 24, 25, 7]  # Granny smith kleppe
 # count = [25, 25, 25, 25]
-sigma = 3  # mean and standard deviation
+sigma = 6  # mean and standard deviation
 high = [1.4, 2.1, 2.8, 3.5, 4.2]
 
 
@@ -37,7 +47,7 @@ darwin_2_minimal_height = [1.37, 1.764, 2.081, 2.382]
 i = 0
 data_list = []
 zone_wide = 1.5
-number_of_sessions = 63
+
 row_l = zone_wide * number_of_sessions
 row_length = np.arange(0, row_l, zone_wide)
 
@@ -53,15 +63,16 @@ if CREATE_DATA:
         i = 0
     d = np.concatenate(data_list, axis=0)
 
+
     # Saving the array
-    np.save('array_data.npy', d)
+    np.save(data_file_name, d)
 else:
     # Loading the array back
-    d = np.load('array_data.npy')
+    d = np.load(data_file_name)
 
 
 # First smart allocation:
-# high = [1.4, 1.7864062209320806, 2.23134878791644, 2.9843472461026255, 4.2]
+high = [1.4, 1.7864062209320806, 2.23134878791644, 2.9843472461026255, 4.2]
 
 # plt.plot(d[:, 0], d[:, 1], '*r')
 # plt.show()
@@ -174,7 +185,8 @@ class FruitHeightCollector:
         self.zones_per_head_dict[head] = zones
 
         print(str(zones))
-        # self.zones_per_head_dict[head] = self.zones_per_head_dict[0]  # not adaptive divide
+        if not ADAPTIVE:
+            self.zones_per_head_dict[head] = self.zones_per_head_dict[0]  # not adaptive divide
         return
 
     def minimal_limit(self, _zones):
@@ -218,11 +230,11 @@ class WilliMovingAlgorithm:
         self.will_arr = np.array(self.zones_targets) > 0
         if np.sum(self.will_arr) <= self.willingness:
             self.world.x_head = self.world.x_head + zone_wide
+            self.world.waste = self.world.waste + 4
+            self.world.waste_session_dict[self.session_counter] = self.world.waste_session
             if self.world.x_head == row_l - zone_wide * 3:
                 return True
             self.update_after_movement()
-            self.world.waste = self.world.waste + 4
-            self.world.waste_session_dict[self.session_counter] = self.world.waste_session
             self.session_counter += 1
             self.world.waste_session = 0
         return False
@@ -267,7 +279,7 @@ def update(frame):
     for height in darwin_2_minimal_height:
         ax.axhline(y=height, color='green', linestyle='-', linewidth=2)
     # Update title
-    ax.set_title('Plot Data Animation')
+    ax.set_title(animation_title)
 
     # Update layout
     ax.set_xlim(0, row_l)
@@ -319,24 +331,25 @@ if animation:
 
     # Save the animation as an mp4 video
     # ani.save('picking.mp4', writer='ffmpeg')
+    if CREATE_GIF:
+        # Save the animation as a gif
 
-    # Save the animation as a gif
-    # ani.save('short_line.gif', writer="pillow")
+        ani.save(gif_file_name, writer="pillow")
 
 #  show waste histogram
-    data = m_ctrl2.world.waste_session_dict
-    keys = list(data.keys())
-    values = list(data.values())
-    sum_count = sum(data.values())
-    text = "Waste time per session - " + str(sum_count)
-    # Plotting as a bar chart
-    plt.figure(figsize=(10, 6))
-    plt.bar(keys, values, color='blue')
-    plt.xlabel('Session counter')
-    plt.ylabel('Waste time')
-    plt.title(text)
-    plt.grid(True)
-
+    if PRINT_WASTE_FIGURE:
+        data = m_ctrl2.world.waste_session_dict
+        keys = list(data.keys())
+        values = list(data.values())
+        sum_count = sum(data.values())
+        text = "Waste time per session - " + str(sum_count)
+        # Plotting as a bar chart
+        plt.figure(figsize=(10, 6))
+        plt.bar(keys, values, color='blue')
+        plt.xlabel('Session counter')
+        plt.ylabel('Waste time')
+        plt.title(text)
+        plt.grid(True)
 
     plt.show()
 
