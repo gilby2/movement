@@ -22,6 +22,7 @@ THREE = 3
 SAMPLES_TO_SAVE = 1500
 
 ############# create data set ###############
+CREATE_DATA = False
 animation = True
 animation_speed = QUICK
 fars_still_works = ZERO
@@ -39,18 +40,28 @@ zone_wide = 1.5
 number_of_sessions = 63
 row_l = zone_wide * number_of_sessions
 row_length = np.arange(0, row_l, zone_wide)
-for dim in row_length:
-    for num in count:
-        n = round(abs(np.random.normal(num, sigma)))
-        xy_min = [dim, high[i]]
-        xy_max = [dim + zone_wide, high[i + 1]]
-        data_1 = np.random.uniform(low=xy_min, high=xy_max, size=(n, 2))
-        data_list.append(data_1)
-        i += 1
-    i = 0
-d = np.concatenate(data_list, axis=0)
+
+if CREATE_DATA:
+    for dim in row_length:
+        for num in count:
+            n = round(abs(np.random.normal(num, sigma)))
+            xy_min = [dim, high[i]]
+            xy_max = [dim + zone_wide, high[i + 1]]
+            data_1 = np.random.uniform(low=xy_min, high=xy_max, size=(n, 2))
+            data_list.append(data_1)
+            i += 1
+        i = 0
+    d = np.concatenate(data_list, axis=0)
+
+    # Saving the array
+    np.save('array_data.npy', d)
+else:
+    # Loading the array back
+    d = np.load('array_data.npy')
+
+
 # First smart allocation:
-# high = [1.4, 1.8042405418974585, 2.2662998535939827, 3.0727785071006806, 4.2]
+# high = [1.4, 1.7864062209320806, 2.23134878791644, 2.9843472461026255, 4.2]
 
 # plt.plot(d[:, 0], d[:, 1], '*r')
 # plt.show()
@@ -337,8 +348,12 @@ print("\nTotal fruit = " + str(m_ctrl2.world.picked() + fruit_left))
 print("Fruit left = " + str(fruit_left))
 print("Picked = " + str(m_ctrl2.world.picked()))
 print("Left rate = " + str((fruit_left / (m_ctrl2.world.picked() + fruit_left)) * 100) + "%")
-print("time = " + str(time))
-print("rate =" + str(m_ctrl2.world.picked() / time))
+print("Waste time = " + str(sum_count))
+
+
+#
+# print("\n\n\ntime = " + str(time))
+# print("rate =" + str(m_ctrl2.world.picked() / time))
 
 pass
 # print("same time new method =" + str(new_rate * time))
